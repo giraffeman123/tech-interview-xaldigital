@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ (splitList "/" .Values.deployment.fsaWebApp.imageName) | last }}  
+  namespace: {{ .Values.namespace }}
+  labels:
+    name: {{ (splitList "/" .Values.deployment.fsaWebApp.imageName) | last }}-apps
+spec:
+  replicas: {{ .Values.deployment.fsaWebApp.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ (splitList "/" .Values.deployment.fsaWebApp.imageName) | last }}
+  template:
+    metadata:
+      labels:
+        app: {{ (splitList "/" .Values.deployment.fsaWebApp.imageName) | last }}
+    spec:
+      containers:
+        - name: {{ (splitList "/" .Values.deployment.fsaWebApp.imageName) | last }}-app
+          image: {{ .Values.deployment.fsaWebApp.imageName }}:{{ .Values.deployment.fsaWebApp.imageTag }}
+          imagePullPolicy: {{ .Values.deployment.fsaWebApp.imagePullPolicy }}
+          env:
+            - name: TZ
+              value: America/Tijuana
+            - name: XAL_DIGITAL_API_BASE_URL
+              value: "http://{{ .Values.deployment.fsaApi.service.name }}:{{ .Values.deployment.fsaApi.service.port }}"                 
+            - name: SERVER_PORT
+              value: "{{ .Values.deployment.fsaWebApp.containerPort }}"    
+          ports:
+            - containerPort: {{ .Values.deployment.fsaWebApp.containerPort }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.deployment.fsaWebApp.containerPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10          
+          livenessProbe:
+            httpGet:
+              path: /home
+              port: {{ .Values.deployment.fsaWebApp.containerPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          {{- with .Values.deployment.fsaWebApp.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}                  
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}    
+

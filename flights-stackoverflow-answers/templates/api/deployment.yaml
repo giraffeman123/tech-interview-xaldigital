@@ -1,0 +1,67 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ (splitList "/" .Values.deployment.fsaApi.imageName) | last }}  
+  namespace: {{ .Values.namespace }}
+  labels:
+    name: {{ (splitList "/" .Values.deployment.fsaApi.imageName) | last }}-apps
+spec:
+  replicas: {{ .Values.deployment.fsaApi.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ (splitList "/" .Values.deployment.fsaApi.imageName) | last }}
+  template:
+    metadata:
+      labels:
+        app: {{ (splitList "/" .Values.deployment.fsaApi.imageName) | last }}
+    spec:
+      containers:
+        - name: {{ (splitList "/" .Values.deployment.fsaApi.imageName) | last }}-app
+          image: {{ .Values.deployment.fsaApi.imageName }}:{{ .Values.deployment.fsaApi.imageTag }}
+          imagePullPolicy: {{ .Values.deployment.fsaApi.imagePullPolicy }}
+          env:
+            - name: TZ
+              value: America/Tijuana
+            - name: PORT
+              value: "{{ .Values.deployment.fsaApi.containerPort }}"    
+            - name: DB_HOST
+              value: "<ADD_DB_URL_HERE>"   
+            - name: DB_USER
+              value: "admin"   
+            - name: DB_PWD
+              value: "holamundo123"   
+            - name: DB_NAME
+              value: "flightdb"   
+            - name: ANSWER_ENDPOINT
+              value: "https://api.stackexchange.com/2.2/search?order=desc&sort=activity&intitle=perl&site=stackoverflow"                          
+          ports:
+            - containerPort: {{ .Values.deployment.fsaApi.containerPort }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.deployment.fsaApi.containerPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10          
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: {{ .Values.deployment.fsaApi.containerPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 60
+          {{- with .Values.deployment.fsaApi.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}                  
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}    
+

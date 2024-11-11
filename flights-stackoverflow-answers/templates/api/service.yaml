@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.deployment.fsaApi.service.name }}    
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: {{ (splitList "/" .Values.deployment.fsaApi.imageName) | last }}
+  type: {{ .Values.deployment.fsaApi.service.type }}    
+  ports:
+    - protocol: TCP      
+      port: {{ .Values.deployment.fsaApi.service.port }}
+      {{- if or (eq "NodePort" .Values.deployment.fsaApi.service.type) (eq "ClusterIP" .Values.deployment.fsaApi.service.type) }}      
+      targetPort: {{ .Values.deployment.fsaApi.containerPort }}
+      {{- else }}
+        {{- fail "Invalid service type. Service type must be NodePort or ClusterIP" }}
+      {{- end }}
